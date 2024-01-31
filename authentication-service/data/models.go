@@ -19,8 +19,13 @@ var db *sql.DB
 func New(dbPool *sql.DB) Models {
 	db = dbPool
 
+	userModel := User{}
+
+	// create user table if not exists
+	userModel.CreateUserTable()
+
 	return Models{
-		User: User{},
+		User: userModel,
 	}
 }
 
@@ -242,6 +247,29 @@ func (u *User) ResetPassword(password string) error {
 
 	stmt := `update users set password = $1 where id = $2`
 	_, err = db.ExecContext(ctx, stmt, hashedPassword, u.ID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (u *User) CreateUserTable() error {
+	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
+	defer cancel()
+
+	stmt := `create table if not exists users (
+		id serial primary key,
+		email varchar(255) not null unique,
+		first_name varchar(100) not null,
+		last_name varchar(100) not null,
+		password varchar(100) not null,
+		user_active int not null,
+		created_at timestamp not null,
+		updated_at timestamp not null
+	)`
+
+	_, err := db.ExecContext(ctx, stmt)
 	if err != nil {
 		return err
 	}
