@@ -6,7 +6,7 @@ services:
       context: ./../broker-service
       dockerfile: ./../broker-service/broker-service.dockerfile
     ports:
-      - "8080:80"
+      - ${BROKER_PORT}:80
     restart: always
     deploy:
       mode: replicated
@@ -17,13 +17,28 @@ services:
       context: ./../authentication-service
       dockerfile: ./../authentication-service/authentication-service.dockerfile
     ports:
-      - "8081:80"
+      - ${AUTH_PORT}:80
     restart: always
     deploy:
       mode: replicated
       replicas: 1
     depends_on:
       - db-postgres
+    environment:
+      DSN: ${DSN}
+
+  logger-service:
+    build:
+      context: ./../logger-service
+      dockerfile: ./../logger-service/logger-service.dockerfile
+    ports:
+      - ${LOGGER_PORT}:80
+    restart: always
+    deploy:
+      mode: replicated
+      replicas: 1
+    depends_on:
+      - db-mongo
     environment:
       DSN: ${DSN}
 
@@ -45,11 +60,22 @@ services:
       mode: replicated
       replicas: 1
 
+  db-mongo:
+    image: mongo:4.4-focal
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./db/mongo:/data/db
+    deploy:
+      mode: replicated
+      replicas: 1
+
   pg-admin:
     image: dpage/pgadmin4
     restart: always
     ports:
-      - "7000:80"
+      - ${PGADMIN_PORT}:80
     environment:
       PGADMIN_DEFAULT_EMAIL: "kfasunle@gmail.com"
       PGADMIN_DEFAULT_PASSWORD: "password"
@@ -59,3 +85,5 @@ services:
 
 volumes:
   postgres-db:
+  mongo-db:
+    driver: local
