@@ -89,9 +89,9 @@
                 received.innerHTML = JSON.stringify(data, "", 4);
 
                 if(data?.error) {
-                    console.error(data)
+                    output.innerHTML += `<br/><strong>Error: from auth service</strong>: ${data?.message}`;
                 }else{
-                    output.innerHTML += `<br/><strong>Response from broker service</strong>: ${data?.message}`;
+                    output.innerHTML += `<br/><strong>Response from auth service</strong>: ${data?.message}`;
                 }
             })
             .catch(error => console.error({error}))
