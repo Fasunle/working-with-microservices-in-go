@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -29,6 +30,18 @@ func main() {
 	}
 
 	client = mongoClient
+
+	// create context to disconnect the mongo connection when the application stops
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+
+	defer cancel()
+
+	// disconnect from database whenever the server stops
+	defer func() {
+		if err = client.Disconnect(ctx); err != nil {
+			log.Panic(err)
+		}
+	}()
 
 	server := &http.Server{
 		Addr:    fmt.Sprintf(":%s", PORT),
