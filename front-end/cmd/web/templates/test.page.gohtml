@@ -65,22 +65,28 @@
         authBtn.addEventListener("click", function() {
             output.innerHTML = "Sending...";
 
-            const body = {
-                method: "POST",
-                data: {
-                    action: "auth",
-                    auth: {
-                        "email":"admin@example.com",
-                        "password":"postgres"
-                    }
+            const payload = {
+                action: "auth",
+                auth: {
+                    "email":"admin@example.com",
+                    "password":"verysecret"
                 }
+            }
+
+            const headers = new Headers();
+            headers.append("Content-Type", "application/json");
+
+            const body = {
+                headers,
+                body: JSON.stringify(payload),
+                method: "POST",
             }
 
             fetch("http://localhost:8080/handle", body)
             .then( res => res.json())
             .then(data => {
                 sent.innerHTML = "empty post request";
-                received.innerHTML = JSON.stringify(data, null, 4);
+                received.innerHTML = JSON.stringify(data, "", 4);
 
                 if(data?.error) {
                     console.error(data)
