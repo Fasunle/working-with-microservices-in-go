@@ -85,7 +85,7 @@
             fetch("http://localhost:8080/handle", body)
             .then( res => res.json())
             .then(data => {
-                sent.innerHTML = "empty post request";
+                sent.innerHTML = JSON.stringify(payload, "", 4);
                 received.innerHTML = JSON.stringify(data, "", 4);
 
                 if(data?.error) {
