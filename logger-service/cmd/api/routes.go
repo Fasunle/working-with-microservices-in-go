@@ -22,5 +22,11 @@ func (app *Config) routes() *chi.Mux {
 
 	mux.Use(middleware.Heartbeat("/ping"))
 
+	mux.Post("/log", app.WriteLog)
+	mux.Get("/log", app.GetLogs)
+	mux.Get("/log/:logId", app.GetLog)
+	mux.Put("/log/:logId", app.UpdateLog)
+	mux.Delete("/log", app.DropLogs)
+
 	return mux
 }

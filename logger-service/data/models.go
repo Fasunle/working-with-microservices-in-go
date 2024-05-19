@@ -14,7 +14,6 @@ import (
 )
 
 var client *mongo.Client
-var LOGGER_DB_NAME string
 
 func New(mongo *mongo.Client) Models {
 	client = mongo
@@ -37,9 +36,9 @@ type LogEntry struct {
 }
 
 func (l *LogEntry) Insert(entry LogEntry) error {
-	LOGGER_DB_NAME = os.Getenv("LOGGER_DB_NAME")
-
-	collection := client.Database(LOGGER_DB_NAME).Collection("logs")
+	//
+	MONGODB_NAME := os.Getenv("MONGODB_NAME")
+	collection := client.Database(MONGODB_NAME).Collection("logs")
 
 	_, err := collection.InsertOne(context.TODO(), LogEntry{
 		Name:      entry.Name,
@@ -57,12 +56,12 @@ func (l *LogEntry) Insert(entry LogEntry) error {
 }
 
 func (l *LogEntry) All() ([]*LogEntry, error) {
-	LOGGER_DB_NAME = os.Getenv("LOGGER_DB_NAME")
-
+	//
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	collection := client.Database(LOGGER_DB_NAME).Collection("logs")
+	MONGODB_NAME := os.Getenv("MONGODB_NAME")
+	collection := client.Database(MONGODB_NAME).Collection("logs")
 
 	opts := options.Find()
 
@@ -102,8 +101,8 @@ func (l *LogEntry) GetOne(id string) (*LogEntry, error) {
 	defer cancel()
 
 	// grab a referrence to the database collection
-	LOGGER_DB_NAME = os.Getenv("LOGGER_DB_NAME")
-	collection := client.Database(LOGGER_DB_NAME).Collection("logs")
+	MONGODB_NAME := os.Getenv("MONGODB_NAME")
+	collection := client.Database(MONGODB_NAME).Collection("logs")
 
 	// convert document strig ID to mongo objectID
 	docID, err := primitive.ObjectIDFromHex(id)
@@ -130,8 +129,8 @@ func (l *LogEntry) DropCollection() error {
 	ctx, cancel := context.WithTimeout(context.TODO(), 15*time.Second)
 	defer cancel()
 
-	LOGGER_DB_NAME = os.Getenv("LOGGER_DB_NAME")
-	collection := client.Database(LOGGER_DB_NAME).Collection("logs")
+	MONGODB_NAME := os.Getenv("MONGODB_NAME")
+	collection := client.Database(MONGODB_NAME).Collection("logs")
 
 	if err := collection.Drop(ctx); err != nil {
 		return err
@@ -145,8 +144,8 @@ func (l *LogEntry) Update() (*mongo.UpdateResult, error) {
 	ctx, cancel := context.WithTimeout(context.TODO(), 15*time.Second)
 	defer cancel()
 
-	LOGGER_DB_NAME = os.Getenv("LOGGER_DB_NAME")
-	collection := client.Database(LOGGER_DB_NAME).Collection("logs")
+	MONGODB_NAME := os.Getenv("MONGODB_NAME")
+	collection := client.Database(MONGODB_NAME).Collection("logs")
 
 	// validate the document ID
 	ID, err := primitive.ObjectIDFromHex(l.ID)

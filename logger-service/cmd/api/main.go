@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"logger/data"
 	"net/http"
 	"os"
 	"time"
@@ -14,13 +15,13 @@ import (
 
 var PORT = "80"
 
-type Config struct{}
+type Config struct {
+	Models data.Models
+}
 
 var client *mongo.Client
 
 func main() {
-
-	app := Config{}
 
 	// connect to mongo
 	mongoClient, err := connectToMongo()
@@ -43,30 +44,28 @@ func main() {
 		}
 	}()
 
-	server := &http.Server{
-		Addr:    fmt.Sprintf(":%s", PORT),
-		Handler: app.routes(),
+	app := Config{
+		Models: data.New(client),
 	}
 
-	err = server.ListenAndServe()
-
-	if err != nil {
-		log.Fatalln(err)
-	}
+	app.serve()
 
 }
 
 func connectToMongo() (*mongo.Client, error) {
-	MONGODB_URI := os.Getenv("MONGO_URI")
+	MONGODB_URI := os.Getenv("MONGODB_URI")
 	MONGODB_USERNAME := os.Getenv("MONGODB_USERNAME")
 	MONGODB_PASSWORD := os.Getenv("MONGODB_PASSWORD")
 
 	// client options
 	clientOptions := options.Client().ApplyURI(MONGODB_URI)
 	clientOptions.SetAuth(options.Credential{
-		Username: MONGODB_USERNAME,
-		Password: MONGODB_PASSWORD,
+		PasswordSet: true,
+		Username:    MONGODB_USERNAME,
+		Password:    MONGODB_PASSWORD,
 	})
+
+	clientOptions.SetConnectTimeout(15 * time.Second)
 
 	c, err := mongo.Connect(context.TODO(), clientOptions)
 
@@ -75,5 +74,27 @@ func connectToMongo() (*mongo.Client, error) {
 		return nil, err
 	}
 
+	log.Println("Connected to mongo database 👌")
+	c.Ping(context.Background(), nil)
+
 	return c, nil
+}
+
+func (app *Config) serve() {
+	server := &http.Server{
+		Addr:    fmt.Sprintf(":%s", PORT),
+		Handler: app.routes(),
+	}
+
+	server.RegisterOnShutdown(func() {
+		log.Println("Shutting down the server")
+	})
+
+	err := server.ListenAndServe()
+
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	log.Println("Logger service started!")
 }
