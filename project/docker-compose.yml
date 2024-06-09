@@ -78,6 +78,11 @@ services:
     deploy:
       mode: replicated
       replicas: 1
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports:
+      - 1025:1025
+      - ${MAILHOG_PORT}:8025
 
   pg-admin:
     image: dpage/pgadmin4
