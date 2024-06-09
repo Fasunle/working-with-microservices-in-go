@@ -8,6 +8,7 @@
                 <hr>
                 <a type="button" id="brokerBtn" class="btn btn-outline-secondary" href="javascript:void(0);">Test Broker</a>
                 <a type="button" id="authBtn" class="btn btn-outline-secondary" href="javascript:void(0);">Test Auth</a>
+                <a type="button" id="logBtn" class="btn btn-outline-secondary" href="javascript:void(0);">Test Log</a>
 
                 <div id="output" class="mt-5" style="outline: 1px solid silver; padding: 2em;">
                     <span class="text-muted">Output shows here...</span>
@@ -34,10 +35,28 @@
 {{define "js"}}
     <script>
         let brokerBtn = document.getElementById("brokerBtn");
+        let logBtn = document.getElementById("logBtn");
         let authBtn = document.getElementById("authBtn");
         let output = document.getElementById("output");
         let sent = document.getElementById("payload");
         let recieved = document.getElementById("recieved");
+
+        function handleResponse(input, data, serviceName = "broker"){
+            received.innerHTML = JSON.stringify(data, null, 4);
+
+            if(input?.body){
+                sent.innerHTML = JSON.stringify(input, "", 4);
+            }else{
+                sent.innerHTML = "empty post request";
+            }
+
+            if(data?.error) {
+                output.innerHTML += `<br/><strong>Error: from  ${serviceName} service</strong>: ${data?.message}`;
+                console.error(data.message)
+            }else{
+                output.innerHTML += `<br/><strong>Response from ${serviceName} service</strong>: ${data?.message}`;
+            }
+        }
 
         brokerBtn.addEventListener("click", function() {
             output.innerHTML = "Sending...";
@@ -48,16 +67,7 @@
 
             fetch("http://localhost:8080", body)
             .then( res => res.json())
-            .then(data => {
-                sent.innerHTML = "empty post request";
-                received.innerHTML = JSON.stringify(data, null, 4);
-
-                if(data?.error) {
-                    console.error(data.message)
-                }else{
-                    output.innerHTML += `<br/><strong>Response from broker service</strong>: ${data?.message}`;
-                }
-            })
+            .then(data => handleResponse(body, data, "log"))
             .catch(error => console.error({error}))
         })
 
@@ -84,16 +94,33 @@
 
             fetch("http://localhost:8080/handle", body)
             .then( res => res.json())
-            .then(data => {
-                sent.innerHTML = JSON.stringify(payload, "", 4);
-                received.innerHTML = JSON.stringify(data, "", 4);
+            .then(data => handleResponse(body, data, "auth"))
+            .catch(error => console.error({error}))
+        })
 
-                if(data?.error) {
-                    output.innerHTML += `<br/><strong>Error: from auth service</strong>: ${data?.message}`;
-                }else{
-                    output.innerHTML += `<br/><strong>Response from auth service</strong>: ${data?.message}`;
+        logBtn.addEventListener("click", function() {
+            output.innerHTML = "Sending...";
+
+            const payload = {
+                action: "log",
+                log: {
+                    "name":"log name",
+                    "data":"This is some log data"
                 }
-            })
+            }
+
+            const headers = new Headers();
+            headers.append("Content-Type", "application/json");
+
+            const body = {
+                headers,
+                body: JSON.stringify(payload),
+                method: "POST",
+            }
+
+            fetch("http://localhost:8080/handle", body)
+            .then( res => res.json())
+            .then(data => handleResponse(payload, data, "log"))
             .catch(error => console.error({error}))
         })
     </script>
