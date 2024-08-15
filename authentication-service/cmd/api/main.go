@@ -27,16 +27,16 @@ func main() {
 	fmt.Println("Starting authentication service on port " + PORT)
 
 	// connect to database
-	connnection := connectToDB()
+	connection := connectToDB()
 
-	if connnection == nil {
+	if connection == nil {
 		log.Panicln("Database connection failed")
 	}
 
 	// start application
 	app := Config{
-		DB:     connnection,
-		Models: data.New(connnection),
+		DB:     connection,
+		Models: data.New(connection),
 	}
 
 	server := &http.Server{
