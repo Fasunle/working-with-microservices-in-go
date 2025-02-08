@@ -13,7 +13,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var PORT = "5001"
+var PORT = "80"
 
 type Config struct {
 	Models data.Models
@@ -56,7 +56,7 @@ func connectToMongo() (*mongo.Client, error) {
 	MONGODB_URI := os.Getenv("MONGODB_URI")
 	MONGODB_USERNAME := os.Getenv("MONGODB_USERNAME")
 	MONGODB_PASSWORD := os.Getenv("MONGODB_PASSWORD")
-
+	// options.Client().ApplyURI("mongodb://foo:bar@localhost:27017")
 	// client options
 	clientOptions := options.Client().ApplyURI(MONGODB_URI)
 	clientOptions.SetAuth(options.Credential{
@@ -66,17 +66,25 @@ func connectToMongo() (*mongo.Client, error) {
 	})
 
 	clientOptions.SetConnectTimeout(15 * time.Second)
+	ctx, cancel := context.WithTimeout(context.TODO(), 30*time.Second)
 
-	c, err := mongo.Connect(context.TODO(), clientOptions)
+	defer cancel()
+
+	c, err := mongo.Connect(ctx, clientOptions)
 
 	if err != nil {
 		fmt.Println("Error connecting to mongodb:", err)
 		return nil, err
 	}
 
-	log.Println("Connected to mongo database 👌")
-	c.Ping(context.Background(), nil)
+	err = c.Ping(context.Background(), nil)
 
+	if err != nil {
+		fmt.Println("Connection unsuccessful:", err)
+		return nil, err
+	}
+
+	log.Println("Connected to mongo database 👌")
 	return c, nil
 }
 

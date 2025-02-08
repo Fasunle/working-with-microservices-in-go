@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-const PORT = "5000"
+const PORT = "80"
 
 var count uint64
 

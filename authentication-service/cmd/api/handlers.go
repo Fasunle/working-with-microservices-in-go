@@ -135,7 +135,7 @@ func (app *Config) logRequest(name, data string) error {
 	entry.Data = data
 
 	jsonData, _ := json.MarshalIndent(entry, "", "\t")
-	logServiceURL := "http://localhost:8083/log"
+	logServiceURL := "http://logger-service/log"
 
 	request, err := http.NewRequest("POST", logServiceURL, bytes.NewBuffer(jsonData))
 

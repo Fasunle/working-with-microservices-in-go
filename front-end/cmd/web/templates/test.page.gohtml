@@ -65,7 +65,7 @@
                 method: "POST"
             }
 
-            fetch("http://localhost:8081", body)
+            fetch("http:\/\/localhost:8081", body)
             .then( res => res.json())
             .then(data => handleResponse(body, data, "log"))
             .catch(error => console.error({error}))
@@ -92,7 +92,7 @@
                 method: "POST",
             }
 
-            fetch("http://localhost:8081/handle", body)
+            fetch("http:\/\/localhost:8081\/handle", body)
             .then( res => res.json())
             .then(data => handleResponse(body, data, "auth"))
             .catch(error => console.error({error}))

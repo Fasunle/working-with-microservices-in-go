@@ -3,3 +3,4 @@
 project/db
 !project/db/users.sql
 **/*App
+**/tmp
