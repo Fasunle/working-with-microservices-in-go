@@ -1,4 +1,5 @@
 *.exe
 .env
 project/db
+!project/db/users.sql
 **/*App

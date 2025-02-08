@@ -100,6 +100,7 @@ func (app *Config) logEvent(w http.ResponseWriter, l LogPayload) {
 
 	app.writeJSON(w, http.StatusAccepted, log)
 }
+
 func (app *Config) authenticate(w http.ResponseWriter, a AuthPayload) {
 	// create json to be sent to auth microservice
 	jsonData, _ := json.MarshalIndent(a, "", "\t")
@@ -128,7 +129,7 @@ func (app *Config) authenticate(w http.ResponseWriter, a AuthPayload) {
 		app.errorJSON(w, errors.New("invalid credentials"))
 		return
 	} else if response.StatusCode != http.StatusAccepted {
-		app.errorJSON(w, errors.New("error trying to call auth service"))
+		app.errorJSON(w, errors.New("error trying to call auth service "+fmt.Sprintf("%d", response.StatusCode)))
 		return
 	}
 

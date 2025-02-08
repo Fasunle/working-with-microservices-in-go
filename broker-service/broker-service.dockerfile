@@ -1,5 +1,5 @@
 # build the application from an image
-FROM golang:1.21.0-alpine AS builder
+FROM golang:1.23.6-alpine AS builder
 
 RUN mkdir /app
 
@@ -14,7 +14,7 @@ RUN chmod +x /app/brokerApp
 # build application from a scratch image
 # this enables use to have a very slim build at the end of the day
 
-FROM alpine:3.19
+FROM alpine:3.21
 
 RUN mkdir /app
 

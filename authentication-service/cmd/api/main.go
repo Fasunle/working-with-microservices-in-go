@@ -2,24 +2,24 @@ package main
 
 import (
 	"authentication/data"
-	"database/sql"
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
-	_ "github.com/jackc/pgconn"
-	_ "github.com/jackc/pgx/v4"
-	_ "github.com/jackc/pgx/v4/stdlib"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-const PORT = "80"
+const PORT = "5000"
 
 var count uint64
 
+var dbpool *pgxpool.Pool
+
 type Config struct {
-	DB     *sql.DB
+	DB     *pgxpool.Pool
 	Models data.Models
 }
 
@@ -50,29 +50,41 @@ func main() {
 	if err != nil {
 		log.Panicln(err)
 	}
+
+	defer dbpool.Close()
 }
 
-func openDB(dsn string) (*sql.DB, error) {
-	db, err := sql.Open("pgx", dsn)
+func openDB(config *pgxpool.Config) (*pgxpool.Pool, error) {
+	dbpool, err := pgxpool.NewWithConfig(context.Background(), config)
 
 	if err != nil {
+		fmt.Printf("Unable to connect to database: %v\n", err)
 		return nil, err
 	}
 
-	err = db.Ping()
+	// Test the connection
+	err = dbpool.Ping(context.Background())
 
 	if err != nil {
+		fmt.Printf("Unable to ping database: %v\n", err)
 		return nil, err
 	}
 
-	return db, nil
+	return dbpool, nil
 }
 
-func connectToDB() *sql.DB {
+func connectToDB() *pgxpool.Pool {
 	dsn := os.Getenv("DSN")
 
+	// confirm if the connection string is valid
+	config, err := pgxpool.ParseConfig(dsn)
+	if err != nil {
+		fmt.Printf("Unable to parse DSN string: %v\n", err)
+		return nil
+	}
+
 	for {
-		connection, err := openDB(dsn)
+		connection, err := openDB(config)
 
 		if err != nil {
 			fmt.Println("PostgreSQL is not ready yet...")

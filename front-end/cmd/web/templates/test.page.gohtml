@@ -39,7 +39,7 @@
         let authBtn = document.getElementById("authBtn");
         let output = document.getElementById("output");
         let sent = document.getElementById("payload");
-        let recieved = document.getElementById("recieved");
+        let received = document.getElementById("received");
 
         function handleResponse(input, data, serviceName = "broker"){
             received.innerHTML = JSON.stringify(data, null, 4);
@@ -65,7 +65,7 @@
                 method: "POST"
             }
 
-            fetch("http://localhost:8080", body)
+            fetch("http://localhost:8081", body)
             .then( res => res.json())
             .then(data => handleResponse(body, data, "log"))
             .catch(error => console.error({error}))
@@ -92,7 +92,7 @@
                 method: "POST",
             }
 
-            fetch("http://localhost:8080/handle", body)
+            fetch("http://localhost:8081/handle", body)
             .then( res => res.json())
             .then(data => handleResponse(body, data, "auth"))
             .catch(error => console.error({error}))
@@ -118,7 +118,7 @@
                 method: "POST",
             }
 
-            fetch("http://localhost:8080/handle", body)
+            fetch("http://localhost:8081/handle", body)
             .then( res => res.json())
             .then(data => handleResponse(payload, data, "log"))
             .catch(error => console.error({error}))

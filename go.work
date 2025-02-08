@@ -1,4 +1,4 @@
-go 1.21.6
+go 1.23.6
 
 // Error loading workspace: gopls was not able to find modules in your workspace.
 // When outside of GOPATH, gopls needs to know which modules you are working on.
@@ -12,7 +12,7 @@ go 1.21.6
 
 use (
 	./authentication-service
-	./logger-service
 	./broker-service
 	./front-end
+	./logger-service
 )

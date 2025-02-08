@@ -11,9 +11,9 @@ const userTable = `create table if not exists users (
 	first_name varchar(100) not null,
 	last_name varchar(100) not null,
 	password varchar(100) not null,
-	user_active int not null,
-	created_at timestamp not null,
-	updated_at timestamp not null
+	user_active boolean not null,
+	created_at timestamp default now(),
+	updated_at timestamp default now()
 )`
 
 func CreateTable(tables ...string) {
@@ -28,6 +28,6 @@ func CreateTable(tables ...string) {
 
 	for _, name := range tables {
 		query := tablesQuery[name]
-		db.ExecContext(ctx, query)
+		db.Exec(ctx, query)
 	}
 }

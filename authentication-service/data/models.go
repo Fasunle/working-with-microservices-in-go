@@ -2,21 +2,22 @@ package data
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"log"
+	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
 )
 
 const dbTimeout = time.Second * 3
 
-var db *sql.DB
+var db *pgxpool.Pool
 
 // New is the function used to create an instance of the data package. It returns the type
 // Model, which embeds all the types we want to be available to our application.
-func New(dbPool *sql.DB) Models {
+func New(dbPool *pgxpool.Pool) Models {
 	db = dbPool
 
 	userModel := User{}
@@ -40,10 +41,10 @@ type Models struct {
 type User struct {
 	ID        int       `json:"id"`
 	Email     string    `json:"email"`
-	FirstName string    `json:"first_name,omitempty"`
-	LastName  string    `json:"last_name,omitempty"`
+	FirstName string    `json:"first_name"`
+	LastName  string    `json:"last_name"`
 	Password  string    `json:"-"`
-	Active    int       `json:"active"`
+	Active    bool      `json:"active"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -56,7 +57,8 @@ func (u *User) GetAll() ([]*User, error) {
 	query := `select id, email, first_name, last_name, password, user_active, created_at, updated_at
 	from users order by last_name`
 
-	rows, err := db.QueryContext(ctx, query)
+	rows, err := db.Query(ctx, query)
+
 	if err != nil {
 		return nil, err
 	}
@@ -94,8 +96,10 @@ func (u *User) GetByEmail(email string) (*User, error) {
 
 	query := `select id, email, first_name, last_name, password, user_active, created_at, updated_at from users where email = $1`
 
+	_email := strings.TrimSpace(strings.ToLower(email))
 	var user User
-	row := db.QueryRowContext(ctx, query, email)
+
+	row := db.QueryRow(ctx, query, _email)
 
 	err := row.Scan(
 		&user.ID,
@@ -109,6 +113,7 @@ func (u *User) GetByEmail(email string) (*User, error) {
 	)
 
 	if err != nil {
+		log.Printf("User NOT found: %s", err.Error())
 		return nil, err
 	}
 
@@ -121,9 +126,9 @@ func (u *User) GetOne(id int) (*User, error) {
 	defer cancel()
 
 	query := `select id, email, first_name, last_name, password, user_active, created_at, updated_at from users where id = $1`
-
 	var user User
-	row := db.QueryRowContext(ctx, query, id)
+
+	row := db.QueryRow(ctx, query, id)
 
 	err := row.Scan(
 		&user.ID,
@@ -158,8 +163,8 @@ func (u *User) Update() error {
 		where id = $6
 	`
 
-	_, err := db.ExecContext(ctx, stmt,
-		u.Email,
+	_, err := db.Exec(ctx, stmt,
+		strings.ToLower(u.Email),
 		u.FirstName,
 		u.LastName,
 		u.Active,
@@ -181,7 +186,7 @@ func (u *User) Delete() error {
 
 	stmt := `delete from users where id = $1`
 
-	_, err := db.ExecContext(ctx, stmt, u.ID)
+	_, err := db.Exec(ctx, stmt, u.ID)
 	if err != nil {
 		return err
 	}
@@ -196,7 +201,7 @@ func (u *User) DeleteByID(id int) error {
 
 	stmt := `delete from users where id = $1`
 
-	_, err := db.ExecContext(ctx, stmt, id)
+	_, err := db.Exec(ctx, stmt, id)
 	if err != nil {
 		return err
 	}
@@ -209,7 +214,8 @@ func (u *User) Insert(user User) (int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), 12)
+	hashedPassword, err := GenerateHash(user.Password)
+
 	if err != nil {
 		return 0, err
 	}
@@ -218,15 +224,15 @@ func (u *User) Insert(user User) (int, error) {
 	stmt := `insert into users (email, first_name, last_name, password, user_active, created_at, updated_at)
 		values ($1, $2, $3, $4, $5, $6, $7) returning id`
 
-	err = db.QueryRowContext(ctx, stmt,
-		user.Email,
+	_, err = db.Exec(ctx, stmt,
+		strings.ToLower(user.Email),
 		user.FirstName,
 		user.LastName,
 		hashedPassword,
 		user.Active,
 		time.Now(),
 		time.Now(),
-	).Scan(&newID)
+	)
 
 	if err != nil {
 		return 0, err
@@ -240,13 +246,14 @@ func (u *User) ResetPassword(password string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 12)
+	hashedPassword, err := GenerateHash(password)
+
 	if err != nil {
 		return err
 	}
 
 	stmt := `update users set password = $1 where id = $2`
-	_, err = db.ExecContext(ctx, stmt, hashedPassword, u.ID)
+	_, err = db.Exec(ctx, stmt, hashedPassword, u.ID)
 	if err != nil {
 		return err
 	}
@@ -269,7 +276,7 @@ func (u *User) CreateUserTable() error {
 		updated_at timestamp not null
 	)`
 
-	_, err := db.ExecContext(ctx, stmt)
+	_, err := db.Exec(ctx, stmt)
 	if err != nil {
 		return err
 	}
@@ -280,17 +287,35 @@ func (u *User) CreateUserTable() error {
 // PasswordMatches uses Go's bcrypt package to compare a user supplied password
 // with the hash we have stored for a given user in the database. If the password
 // and hash match, we return true; otherwise, we return false.
-func (u *User) PasswordMatches(plainText string) (bool, error) {
-	err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(plainText))
+func PasswordMatches(hashed, plainText string) (bool, error) {
+	err := bcrypt.CompareHashAndPassword([]byte(hashed), []byte(plainText))
+
 	if err != nil {
 		switch {
 		case errors.Is(err, bcrypt.ErrMismatchedHashAndPassword):
 			// invalid password
-			return false, nil
+			return false, bcrypt.ErrMismatchedHashAndPassword
 		default:
 			return false, err
 		}
 	}
 
 	return true, nil
+}
+
+func GenerateHash(plainText string) (string, error) {
+	formatted := strings.TrimSpace(plainText)
+	hashed, err := bcrypt.GenerateFromPassword([]byte(formatted), 12)
+
+	if err != nil {
+		switch {
+		case errors.Is(err, bcrypt.ErrPasswordTooLong):
+			// invalid password
+			return "", bcrypt.ErrPasswordTooLong
+		default:
+			return "", err
+		}
+	}
+
+	return string(hashed), nil
 }

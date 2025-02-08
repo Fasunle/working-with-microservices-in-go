@@ -13,7 +13,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var PORT = "80"
+var PORT = "5001"
 
 type Config struct {
 	Models data.Models

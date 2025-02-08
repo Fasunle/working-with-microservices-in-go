@@ -1,4 +1,4 @@
-version: '3'
+name: "golang-microservices"
 
 services:
   broker-service:
@@ -23,7 +23,8 @@ services:
       mode: replicated
       replicas: 1
     depends_on:
-      - db-postgres
+      db-postgres:
+        condition: service_healthy
     environment:
       DSN: ${DSN}
 
@@ -31,14 +32,20 @@ services:
     build:
       context: ./../logger-service
       dockerfile: ./../logger-service/logger-service.dockerfile
-    # ports:
-    #   - ${LOGGER_PORT}:80
+    ports:
+      - ${LOGGER_PORT}:80
     restart: always
     deploy:
       mode: replicated
       replicas: 1
     depends_on:
-      - db-mongo
+      db-mongo:
+        condition: service_healthy
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:8083/ping"]
+    #   interval: 5s
+    #   timeout: 5s
+    #   retries: 10
     environment:
       MONGODB_URI: ${MONGODB_URI}
       MONGODB_NAME: ${MONGODB_NAME}
@@ -49,7 +56,7 @@ services:
   # this is how the network is correctly routed to the database
   # NOTE: outside docker container, it would be localhost
   db-postgres:
-    image: postgres:14.2-bullseye
+    image: postgres:16.4-bullseye
     restart: always
     ports:
       - "5432:5432"
@@ -59,6 +66,11 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - ./db/postgres:/var/lib/postgresql/data/
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     deploy:
       mode: replicated
       replicas: 1
@@ -75,6 +87,11 @@ services:
 
     volumes:
       - ./db/mongo:/data/db
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     deploy:
       mode: replicated
       replicas: 1
